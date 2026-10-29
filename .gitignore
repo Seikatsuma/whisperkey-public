@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.DS_Store
+.cache/
+whisper_small_manual/
+*.mp3
+.env
+*.wav
+WhisperKey-Eval-Samples/
+whisperkey.lock
+
+# Скачанные пакеты и артефакты работы — в репозитории им не место
+*.whl
+*.tar.gz
+qa/
+debug_audio.wav

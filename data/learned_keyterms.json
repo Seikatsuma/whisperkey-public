@@ -1,0 +1,52 @@
+{
+  "updated": "2026-10-26 04:55:22",
+  "source": "/home/claude/voice-archive/claude-ui × groq whisper-large-v3-turbo, последние 120 диктовок",
+  "terms": [
+    "Kimi",
+    "PROMT",
+    "ArtRate"
+  ],
+  "candidates": [
+    {
+      "form": "GLM",
+      "variants": {
+        "GLM": 4
+      },
+      "missed": 0,
+      "seen": 3,
+      "absorbed": 0,
+      "reason": "похоже на реальный термин — искажение, не слово"
+    }
+  ],
+  "missed_counts": {
+    "bata": 1,
+    "transcribe": 1,
+    "devon": 2,
+    "cloudui": 3,
+    "load": 1,
+    "k3": 1,
+    "eleven": 1,
+    "labs": 1,
+    "lod": 1,
+    "call": 1,
+    "domate": 1
+  },
+  "already_fine": {
+    "deepgram": 2,
+    "telegram": 2,
+    "cloud": 1,
+    "whisper": 1,
+    "key": 1,
+    "devin": 4,
+    "swe": 2,
+    "kimi": 2,
+    "gpt": 1,
+    "glm": 3,
+    "api": 4,
+    "sw": 1,
+    "nvidia": 1,
+    "zh": 1,
+    "ip": 1,
+    "spotify": 1
+  }
+}

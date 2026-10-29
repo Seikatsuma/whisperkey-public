@@ -1,0 +1,8 @@
+numpy
+sounddevice
+requests
+faster-whisper
+pynput
+psutil
+python-dotenv
+pyperclip
