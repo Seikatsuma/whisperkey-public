@@ -101,7 +101,7 @@ venv\Scripts\python.exe -m pip install --upgrade pip
 **Шаг 10. Установите сами библиотеки.**
 
 ```
-venv\Scripts\python.exe -m pip install -r requirements.txt
+venv\Scripts\python.exe -m pip install -r requirements-server.txt   # минимальный набор для моста; полный requirements.txt — это клиент Mac/Windows, на Linux не встанет (pynput/evdev)
 ```
 
 Это самый долгий шаг: 5–15 минут, скачивается несколько сотен мегабайт. Строки `Collecting …`, `Downloading …` — это нормальный ход работы, ничего нажимать не нужно.
@@ -344,7 +344,7 @@ git branch --show-current
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements-server.txt   # минимальный набор для моста; полный requirements.txt — это клиент Mac/Windows, на Linux не встанет (pynput/evdev)
 ```
 
 *Что ты должен увидеть:* после второй команды в начале строки появится `(venv)` — признак, что полка активна. Последняя команда качает пару сотен мегабайт, идёт 2–5 минут и заканчивается строкой `Successfully installed …`, где перечислены `numpy`, `sounddevice`, `faster-whisper`, `pynput`, `pyperclip`, `psutil`, `requests`.
@@ -604,7 +604,7 @@ EVAL_SAMPLES_ENABLED = False
 
 | Система | Что вы видите | Что это на самом деле | Что делать |
 |---|---|---|---|
-| обе | `ModuleNotFoundError: No module named 'sounddevice'` (или `numpy`, `pynput`, `faster_whisper`) | Библиотеки поставлены не в ту «коробку», из которой запускается программа | **Windows:** повторите установку той же командой `venv\Scripts\python.exe -m pip install -r requirements.txt`, а не просто `pip install`. **Mac:** зайдите в папку проекта, `source venv/bin/activate`, затем `pip install -r requirements.txt` |
+| обе | `ModuleNotFoundError: No module named 'sounddevice'` (или `numpy`, `pynput`, `faster_whisper`) | Библиотеки поставлены не в ту «коробку», из которой запускается программа | **Windows:** повторите установку той же командой `venv\Scripts\python.exe -m pip install -r requirements-server.txt   # минимальный набор для моста; полный requirements.txt — это клиент Mac/Windows, на Linux не встанет (pynput/evdev)`, а не просто `pip install`. **Mac:** зайдите в папку проекта, `source venv/bin/activate`, затем `pip install -r requirements-server.txt   # минимальный набор для моста; полный requirements.txt — это клиент Mac/Windows, на Linux не встанет (pynput/evdev)` |
 | обе | Программа «причёсывает» речь, метки `[не распознано]` не бывает, файла `agent.md` и папки `tests` в проекте нет | Скачана устаревшая копия проекта | Скачайте заново с https://github.com/Seikatsuma/whisperkey и переустановите библиотеки |
 | обе | При старте: `ОШИБКА: API КЛЮЧ НЕ НАЙДЕН` | Файла `.env` нет, он лежит не в папке проекта или называется `.env.txt` | Создайте его командой (`copy .env.example .env` на Windows, `cp .env.example .env` на Mac) и впишите ключ. Проверить: `type .env` на Windows, `cat .env` на Mac — должна показаться строка с ключом |
 | обе | `console.groq.com` не открывается, ошибка **403** | Groq блокирует российские адреса на своей стороне | Включите VPN до открытия сайта. Без VPN не работает ни регистрация, ни само распознавание в облаке |
@@ -627,7 +627,7 @@ EVAL_SAMPLES_ENABLED = False
 | Windows | Русские строки в окне — нечитаемый набор символов | Консоль игнорировала `chcp 65001` из `run_whisperkey.bat` (бывает в сторонних консолях и при запуске файла не двойным кликом) | На работу не влияет. Если мешает — запускайте `run_whisperkey.bat` обычным двойным кликом, а не из PowerShell или чужого терминала |
 | macOS | `command not found: brew` | Пропущен блок `Next steps` из шага 1 | Выполните две строки с `brew shellenv` и откройте Терминал заново |
 | macOS | `OSError: PortAudio library not found` | Не поставлена системная библиотека звука | `brew install portaudio` |
-| macOS | При `pip install -r requirements.txt` — красная ошибка про сборку `ctranslate2` или `Building wheel ... failed` | Homebrew поставил самый свежий Python, готовых сборок под него ещё нет | Поставьте версию, под которую сборки есть, и пересоберите полку: `brew install python@3.12`, затем в папке проекта `rm -rf venv`, `python3.12 -m venv venv`, `source venv/bin/activate`, `pip install -r requirements.txt` |
+| macOS | При `pip install -r requirements-server.txt   # минимальный набор для моста; полный requirements.txt — это клиент Mac/Windows, на Linux не встанет (pynput/evdev)` — красная ошибка про сборку `ctranslate2` или `Building wheel ... failed` | Homebrew поставил самый свежий Python, готовых сборок под него ещё нет | Поставьте версию, под которую сборки есть, и пересоберите полку: `brew install python@3.12`, затем в папке проекта `rm -rf venv`, `python3.12 -m venv venv`, `source venv/bin/activate`, `pip install -r requirements-server.txt   # минимальный набор для моста; полный requirements.txt — это клиент Mac/Windows, на Linux не встанет (pynput/evdev)` |
 | macOS | `python3 --version` показывает 3.9 или ниже | Отвечает встроенный в macOS Python, а не поставленный Homebrew | Закройте Терминал через `Cmd + Q` и откройте заново. Если не помогло — выполните блок `brew shellenv` из шага 1 и снова перезапустите Терминал |
 | macOS | `zsh: permission denied` или «нет соответствующих прав доступа» при клике по `.command` | Потерян признак запускаемости при переносе файла через Finder, облако или флешку | Одна команда в Терминале: `find "$HOME" -name "*.command" -print0 \| xargs -0 chmod +x`. Подробности — раздел «Если файл `.command` не запускается» |
 | macOS | «Не удаётся открыть, так как не удалось проверить разработчика» | Карантин macOS для скачанного из интернета | Правой кнопкой по файлу → «Открыть» → «Открыть». Либо `xattr -d com.apple.quarantine` с перетаскиванием |
@@ -684,7 +684,7 @@ WhisperKey полностью самодостаточен: без сервер�
 git clone https://github.com/Seikatsuma/whisperkey.git
 cd whisperkey
 python3 -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-server.txt   # минимальный набор для моста; полный requirements.txt — это клиент Mac/Windows, на Linux не встанет (pynput/evdev)
 echo "DEEPGRAM_API_KEY=ваш_ключ" > .env
 echo "GROQ_API_KEY=ваш_ключ" >> .env
 python3 http_bridge_server.py    # слушает 127.0.0.1:8092

@@ -1,0 +1,5 @@
+# Зависимости СЕРВЕРНОГО моста (Linux). Клиент на Mac/Windows ставит requirements.txt
+numpy
+requests
+python-dotenv
+faster-whisper
