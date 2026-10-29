@@ -65,6 +65,13 @@ import numpy as np
 # repo root on sys.path so `import speech_engine` works without install.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Keys live in .env next to this file (same convention as the client).
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+except ImportError:
+    pass
+
 from speech_engine.engine import Engine  # noqa: E402
 from speech_engine.profiles import DICTATION  # noqa: E402
 from speech_engine.groq_engine import transcribe_groq  # noqa: E402
