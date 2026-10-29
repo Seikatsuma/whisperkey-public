@@ -224,7 +224,7 @@ SaluteSpeech: после конца записи медиана 0.87 с прот
   там Deepgram и Groq живы). Механика и инварианты — `~/speech-engine/agent.md`,
   раздел «Ступень remote». Здесь важно: включается ТОЛЬКО переменной
   `REMOTE_ASR_URL`, код `whisperkey.py` не менялся (`Engine` читает env сам).
-- **мост в репо** (): читает ключи из  рядом
+- **мост в репо** (http_bridge_server.py): читает ключи из `.env` рядом
   с файлом (dotenv) И из окружения — systemd Environment= тоже работает.
 - **лаунчер** (`Запустить WhisperKey.command`): поднимает
   `ssh -N -L 8092:127.0.0.1:8092 "$BRIDGE_HOST"` (BatchMode — без диалогов;
