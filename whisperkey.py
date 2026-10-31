@@ -724,7 +724,7 @@ def _close_idle_stream():
 def schedule_idle_close():
     """Заводит таймер освобождения микрофона, сбрасывая предыдущий."""
     global _idle_timer
-    if not PREROLL_ENABLED or PREROLL_IDLE_TIMEOUT <= 0:
+    if PREROLL_IDLE_TIMEOUT <= 0:
         return
     with _idle_timer_lock:
         if _idle_timer is not None:
@@ -2425,10 +2425,10 @@ def _begin_stop():
         if capped:
             _tail_fade()
         _end_live_stream(current_session_id)
-        # При включённой предзаписи поток остаётся открытым — иначе следующее
-        # нажатие снова начнётся с холодного старта и срежет первое слово.
-        if not PREROLL_ENABLED:
-            stop_audio_stream()
+        # Поток микрофона НЕ закрываем сразу — следующее нажатие должно
+        # стартовать мгновенно (холодный старт CoreAudio 1–2 с давал
+        # «нажал — тишина — через 2 с плашка», Егор 31.10). Освобождение —
+        # по таймеру простоя через schedule_idle_close в finally.
 
         audio_snapshot = list(recording_data)
         if len(audio_snapshot) < 10:
@@ -2504,15 +2504,20 @@ def _start_recording() -> bool:
                 if not ensure_audio_stream():
                     session_phase = "idle"
                     pill.set_state("error")
+                    trigger_held = False
                     return False
                 # Порядок важен: буфер заполняется ДО поднятия is_recording,
                 # иначе колбэк успевает дописать в старый список.
                 recording_data = list(preroll_buffer)
                 preroll_buffer.clear()
             else:
-                if not start_audio_stream():
+                # Живой поток переиспользуем без переоткрытия — он держится
+                # тёплым PREROLL_IDLE_TIMEOUT после диктовки; холодный старт
+                # только после реального простоя.
+                if not ensure_audio_stream():
                     session_phase = "idle"
                     pill.set_state("error")
+                    trigger_held = False
                     return False
                 recording_data = []
 
@@ -2549,7 +2554,47 @@ def _start_recording() -> bool:
             _end_live_stream(active_session_id, abort=True)
             session_phase = "idle"
             pill.set_state("error")
+            trigger_held = False
             return False
+    return True
+
+
+# Старт записи из слушателя клавиш — асинхронно. Раньше _start_recording
+# выполнялся прямо в потоке pynput: холодный старт CoreAudio (микрофон
+# освобождался после каждой диктовки, PREROLL_ENABLED=False) занимал 1–2 с,
+# всё это время события клавиатуры ждали — «нажал Option, кнопка не
+# прожимается, через пару секунд запись» (Егор 31.10, третья жалоба на
+# мёртвое окно). Теперь плашка «подготовка» поднимается мгновенно, поток
+# открывается в фоне; пока он не поднялся — фаза уже "recording", повторное
+# нажатие идёт в pending, а не в дубль старта.
+_rec_starting = False
+
+def _start_recording_async() -> bool:
+    """Немедленный отклик на нажатие + фоновое открытие микрофона."""
+    global _rec_starting, session_phase, latch_active, _latch_started_ts
+    with state_lock:
+        if _rec_starting or session_phase != "idle":
+            return False
+        _rec_starting = True
+        # Фазу ставим до фактического старта — это гейт от повторного
+        # нажатия, пока микрофон открывается.
+        session_phase = "recording"
+    pill.set_state("processing")
+
+    def _go():
+        global _rec_starting
+        try:
+            ok = _start_recording()
+            if ok and not _option_is_down():
+                # Клавишу отпустили раньше, чем открылся микрофон — отпускание
+                # уже прошло и до записи не дошло бы: без залипания запись
+                # висела бы без завершающего триггера.
+                latch_active = True
+                _latch_started_ts = time.time()
+                print("[rec] залипание: клавиша отпущена до готовности микрофона")
+        finally:
+            _rec_starting = False
+    threading.Thread(target=_go, daemon=True).start()
     return True
 
 
@@ -2607,6 +2652,14 @@ def on_press(key):
                 # Дедлайн только когда залипание ещё не включено — иначе
                 # протухшее окно переживёт эту запись и ложно поймает следующий тап.
                 _latch_deadline = now + LATCH_WINDOW_SEC
+    elif is_trigger(key) and trigger_held:
+        # Тот же потерянный release, но вне записи: залипший held раньше
+        # глушил нажатие МОЛЧА — обе ветки ниже требуют not trigger_held
+        # («нажал — ничего, второй раз сработало», Егор 31.10). Физически
+        # клавишу отпустили иначе press не пришёл бы — снимаем флаг и идём
+        # обычным путём старта.
+        _tlog(f"  → held залип в фазе {session_phase}: отпускание потерялось")
+        trigger_held = False
     if is_trigger(key) and not trigger_held:
         # Сначала — режимы, которые не стартуют новую запись и потому идут до
         # дебаунса: второй тап приходит раньше дебаунс-порога и съедается им.
@@ -2668,7 +2721,7 @@ def on_press(key):
                 _pending_rec_ts = now
                 _tlog(f"  → фаза {session_phase}: ждущий старт")
                 return
-        if not _start_recording():
+        if not _start_recording_async():
             return
 
 def on_release(key):
