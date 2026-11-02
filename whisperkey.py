@@ -294,7 +294,11 @@ last_trigger_ts = 0.0
 # в рабочей версии не держится. Включай True, только если готов проверять.
 PREROLL_ENABLED = False
 PREROLL_SECONDS = 0.5
-PREROLL_IDLE_TIMEOUT = 90.0
+# Холодный старт CoreAudio ~1с — «нажал, а слушать начал через секунду»
+# (Егор 02.11). Держим тёплым 10 минут: худший случай — прежний холодный
+# старт (мёртвый поток переоткрывает ensure_audio_stream), цена —
+# индикатор микрофона дольше.
+PREROLL_IDLE_TIMEOUT = 600.0
 _PREROLL_BLOCKS = max(1, int(PREROLL_SECONDS * SAMPLE_RATE / 512))
 preroll_buffer: deque = deque(maxlen=_PREROLL_BLOCKS)
 TRIGGER_DEBOUNCE_SEC = 0.35
@@ -2474,7 +2478,9 @@ def process_audio(audio_snapshot: list, session_id: int):
                     session_phase = "idle"
             # Распознавание кончилось — отложенное нажатие может стартовать
             # уже здесь, не дожидаясь вставки (захват закрыт, снимок взят).
-            _maybe_pending_start()
+            # В отдельном потоке: _start_recording при холодном микрофоне
+            # ~1с, и эта секунда раньше добавлялась к вставке текста.
+            threading.Thread(target=_maybe_pending_start, daemon=True).start()
             ins_sec = direct_insert(text + " ") or 0.0
             # Раздельный замер: «стало дольше» почти всегда жило на стороне
             # вставки, а не ASR — путать их нельзя.
