@@ -2886,6 +2886,10 @@ def _release_before_start() -> None:
     Раньше здесь стояло безусловное залипание — отсюда фантомные «записал
     3–4 с и ушло в распознавание» и «не реагирует» (08.11.26)."""
     global _last_release_ts, _release_seq, _latch_deadline
+    if latch_active:
+        # Второй тап при прогреве уже взвёл залипание — окно не открываем,
+        # иначе его истечение убьёт залипшую запись (кейс 12.11.26).
+        return
     hold = time.time() - _tap_press_ts
     if hold >= LATCH_TAP_MAX_SEC:
         print(f"[rec] держали {hold:.1f} с до готовности микрофона — стоп")
@@ -3027,7 +3031,9 @@ def on_press(key):
                 armed = True
             else:
                 armed = False
-                if (not end_by_press and is_recording and _last_release_ts > 0
+                if (not end_by_press
+                        and (is_recording or session_phase == "recording")
+                        and _last_release_ts > 0
                         and not _latch_candidate_ts
                         and now - _last_release_ts < LATCH_CANDIDATE_SEC):
                     # Второй тап с опозданием: запись ещё жива (окно истекло,
@@ -3089,7 +3095,8 @@ def on_release(key):
         if cand_ts:
             _latch_candidate_ts = 0.0
             hold = time.time() - cand_ts
-            if hold < LATCH_TAP_MAX_SEC and is_recording:
+            if hold < LATCH_TAP_MAX_SEC and (is_recording
+                                           or session_phase == "recording"):
                 # Короткий повторный тап — залипание, даже задним числом:
                 # дожим хвоста отменяется в delayed_stop по latch_active.
                 with state_lock:
@@ -3109,6 +3116,14 @@ def on_release(key):
             # Держали долго — не тап: идём в обычный путь отпускания
             # (hold ниже посчитается от _tap_press_ts этого нажатия).
         if latch_active or not is_recording:
+            if not is_recording and session_phase == "recording":
+                # Отпускание пришло до поднятия микрофона и было проглочено:
+                # фиксируем его, иначе второй тап при прогреве не отличить от
+                # холда — окно залипания не открывается и тап-тап слетал в
+                # мгновенную расшифровку (журнал Егора 12.11.26).
+                with state_lock:
+                    _last_release_ts = time.time()
+                    _release_seq += 1
             # Залипшая запись заканчивается нажатием (в on_press), отпускание
             # здесь просто игнорируется — как у Wispr.
             return
